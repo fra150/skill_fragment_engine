@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-Here’s the English translation:
 
----
 
 # Skill Fragment Engine (SFE)
 
@@ -189,4 +186,4 @@ MIT open source license
 =======
 # skill_fragment_engine
 Cognitive cache layer for AI agents with verified skill reuse
->>>>>>> 41758bf6b45bd52945a3ea80df09d54b6afe4a29
+
