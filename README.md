@@ -1,34 +1,27 @@
-Here’s the English translation:
-
----
-
-# Skill Fragment Engine (SFE)
+﻿# Skill Fragment Engine (SFE)
 
 A “cognitive cache” layer for AI agents with **verified reuse** of results.
 
-Principle: **LOOK BEFORE YOU THINK**. Before executing a task, SFE:
-
-1. looks for an exact match (0 LLM tokens),
-2. looks for similar matches (0 LLM tokens),
-3. injects the “cognitive history” into the context,
-4. decides REUSE / ADAPT / RECOMPUTE,
-5. saves the new trace (fragment).
+Core principle: **LOOK BEFORE YOU THINK**. Before executing any task, SFE:
+1) looks for an exact match (0 LLM tokens),
+2) looks for similar matches (0 LLM tokens),
+3) injects “cognitive history” into the context,
+4) decides REUSE / ADAPT / RECOMPUTE,
+5) saves the new trace (fragment).
 
 ## Current Status (Results)
 
-* Local fragment persistence (JSON): `./data/fragments.json`
-* **Exact** + **similar** lookup (keyword overlap) at zero cost (no LLM calls)
-* Operational pipeline: Retrieval → Validation → Execution → Capture
-* FastAPI API ready:
-
-  * `POST /api/v1/execute`
-  * `GET /api/v1/fragment/search`
-  * `GET /api/v1/health`
-* Offline mode:
-
-  * if `LLM_API_KEY` is not provided, deterministic embeddings (hash → vector) are used and semantic retrieval is disabled
-  * “RECOMPUTE” execution currently uses a mock response (wiring ready to connect a real LLM)
-* Tests: `python -m pytest -q` → 36 passed
+- Local fragment persistence (JSON): `./data/fragments.json`
+- **Exact** + **similar** lookup (keyword overlap) at zero cost (no LLM calls)
+- Operational pipeline: Retrieval → Validation → Execution → Capture
+- FastAPI API ready:
+  - `POST /api/v1/execute`
+  - `GET /api/v1/fragment/search`
+  - `GET /api/v1/health`
+- Offline mode:
+  - if `LLM_API_KEY` is not provided, deterministic embeddings (hash → vector) are used and semantic retrieval is disabled
+  - “RECOMPUTE” execution currently uses a mock response (wiring ready to connect a real LLM)
+- Tests: `python -m pytest -q` → 36 passed
 
 ## Architecture (Implemented)
 
@@ -44,18 +37,18 @@ SKILL MATCHER LAYER
   ▼
 VALIDATOR ENGINE
   - exact → REUSE
-  - otherwise: context distance + rules by task_type → REUSE/ADAPT/RECOMPUTE
+  - otherwise: context distance + thresholds per task_type → REUSE/ADAPT/RECOMPUTE
   │
   ▼
 EXECUTION
   - REUSE: returns cached output
   - ADAPT: modifies cached output (heuristics)
-  - RECOMPUTE: “calls LLM” (currently mock) with cognitive history in context
+  - RECOMPUTE: “LLM call” (currently mocked) with cognitive history in context
   │
   ▼
 CAPTURE
-  - saves fragment to ./data/fragments.json
-  - indexes embedding in ./data/faiss (when capturing a new fragment)
+  - stores fragment to ./data/fragments.json
+  - indexes embedding to ./data/faiss (when capturing a new fragment)
 ```
 
 ## Quick Start (Local)
@@ -66,21 +59,21 @@ CAPTURE
 pip install -r requirements.txt
 ```
 
-### Start Server (Windows / PowerShell)
+### Start server (Windows / PowerShell)
 
-This project uses a `src/` layout, so to run without editable install you need `PYTHONPATH=src`.
+This project uses a `src/` layout. If you are not running an editable install, set `PYTHONPATH=src`.
 
 ```powershell
 $env:PYTHONPATH="src"
 python -m uvicorn skill_fragment_engine.main:app --host 0.0.0.0 --port 8000
 ```
 
-* Home: [http://localhost:8000/](http://localhost:8000/)
-* Swagger: [http://localhost:8000/docs](http://localhost:8000/docs)
+- Home: http://localhost:8000/
+- Swagger: http://localhost:8000/docs
 
 ## API
 
-### Execute a Task
+### Execute a task
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/execute \
@@ -93,17 +86,15 @@ curl -X POST http://localhost:8000/api/v1/execute \
   }'
 ```
 
-Repeating the same request, if the fragment is present in the store, SFE aims for REUSE (exact match).
+Running the same request twice will try to hit REUSE (exact match) once the fragment is stored.
 
-### Search Fragments
+### Search fragments
 
 ```bash
 curl "http://localhost:8000/api/v1/fragment/search?query=reverse%20a%20string&top_k=5"
 ```
 
-Note: search can use exact/keyword and, if configured, semantic retrieval (FAISS).
-
-## Usage in Python
+## Python Usage
 
 ```python
 from skill_fragment_engine.execution.engine import ExecutionEngine
@@ -122,14 +113,13 @@ res = await engine.execute(req)
 print(res.decision, res.metadata.cost_saved)
 ```
 
-## Storage (on disk)
+## On-disk storage
 
-* `./data/fragments.json`
-
-  * contains serialized fragment + prompt + input hash
-* `./data/faiss/`
-
-  * contains `index.faiss` and `id_map.json`
+- `./data/fragments.json` holds:
+  - the serialized `SkillFragment`
+  - original prompt
+  - deterministic input hash
+- `./data/faiss/` holds `index.faiss` and `id_map.json`
 
 ## Configuration (.env)
 
@@ -137,7 +127,7 @@ Example:
 
 ```env
 LLM_API_KEY=sk-...
-LLM_MODEL=claude Opus 4.6
+LLM_MODEL=gpt-4
 
 FRAGMENT_STORE_PATH=./data/fragments.json
 VECTOR_STORE_PATH=./data/faiss
@@ -148,9 +138,8 @@ KEYWORD_SIMILARITY_MIN_OVERLAP=0.3
 ```
 
 Without `LLM_API_KEY`:
-
-* no external calls for embeddings
-* semantic retrieval disabled
+- no external embedding calls
+- semantic retrieval is disabled
 
 ## Development
 
@@ -161,8 +150,6 @@ python -m pytest -q
 ```
 
 ### Dev tooling (ruff/mypy)
-
-If you also want lint/type checking:
 
 ```bash
 pip install -e ".[dev]"
