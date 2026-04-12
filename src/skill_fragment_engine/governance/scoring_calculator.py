@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import structlog
@@ -101,11 +101,11 @@ class ScoringCalculator:
         """
         if not fragment.validation_history:
             # No usage history - use creation date
-            age_days = (datetime.utcnow() - fragment.created_at).days
+             age_days = (datetime.now(timezone.utc) - fragment.created_at).days
         else:
-            # Use last validation date
-            last_use = max(v.timestamp for v in fragment.validation_history)
-            age_days = (datetime.utcnow() - last_use).days
+             # Use last validation date
+             last_use = max(v.timestamp for v in fragment.validation_history)
+             age_days = (datetime.now(timezone.utc) - last_use).days
 
         # Exponential decay over 90 days
         if age_days <= 0:

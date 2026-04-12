@@ -22,6 +22,9 @@ from skill_fragment_engine.core.enums import (
     ValidationResult,
     VariantCreationReason,
     Variant,
+    FeedbackType,
+    FeedbackCategory,
+    UserFeedback,
 )
 
 
@@ -53,4 +56,7 @@ __all__ = [
     "ValidationResult",
     "VariantCreationReason",
     "Variant",
+    "FeedbackType",
+    "FeedbackCategory",
+    "UserFeedback",
 ]

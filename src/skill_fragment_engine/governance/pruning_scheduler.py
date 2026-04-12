@@ -160,10 +160,10 @@ class PruningScheduler:
         delete_callback=None,
     ) -> int:
         """Remove fragments that are old and never used."""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         removed = 0
-        cutoff = datetime.utcnow() - timedelta(days=30)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=30)
 
         for fragment in fragments[:]:
             if not fragment.is_active:

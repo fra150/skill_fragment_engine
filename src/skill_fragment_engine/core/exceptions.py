@@ -1,6 +1,4 @@
 """Custom exceptions for SFE."""
-
-
 class SFEException(Exception):
     """Base exception for all SFE errors."""
 
@@ -111,3 +109,7 @@ class PrivacyViolationError(SFEException):
             message=message,
             details={"detected_pattern": detected_pattern} if detected_pattern else {}
         )
+
+
+# Alias for backward compatibility
+ExecutionError = LLMError

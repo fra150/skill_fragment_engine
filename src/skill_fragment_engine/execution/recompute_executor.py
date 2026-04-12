@@ -7,6 +7,7 @@ import structlog
 
 from skill_fragment_engine.core.config import get_settings
 from skill_fragment_engine.core.models import ExecutionRequest
+from skill_fragment_engine.services.llm_service import get_llm_service, LLMService
 
 logger = structlog.get_logger(__name__)
 
@@ -21,6 +22,14 @@ class RecomputeExecutor:
 
     def __init__(self):
         self.settings = get_settings()
+        self._llm_service: LLMService | None = None
+    
+    @property
+    def llm_service(self) -> LLMService:
+        """Get or create LLM service."""
+        if self._llm_service is None:
+            self._llm_service = get_llm_service()
+        return self._llm_service
 
     async def execute(self, request: ExecutionRequest) -> any:
         """
@@ -107,22 +116,26 @@ class RecomputeExecutor:
     async def _call_llm(self, prompt: str, request: ExecutionRequest) -> any:
         """
         Call LLM service.
-
-        In production, this would use the configured LLM service
-        (OpenAI, Anthropic, local model, etc.)
+        
+        Uses the configured LLM service (OpenAI, Anthropic, or mock).
         """
-        # Placeholder - in real implementation:
-        # from skill_fragment_engine.services.llm_service import LLMService
-        # llm = LLMService()
-        # return await llm.complete(prompt, model=request.context.get("model"))
-
-        # For now, return a mock response
-        logger.warning("llm_call_mocked", prompt=prompt[:100])
-
+        # Get model from request context or use default
+        model = request.context.get("model") if request.context else None
+        temperature = request.parameters.get("temperature", 0.7) if request.parameters else 0.7
+        
+        # Call the LLM service
+        response = await self.llm_service.complete(
+            prompt=prompt,
+            model=model,
+            temperature=temperature,
+        )
+        
+        # Return structured result
         return {
-            "status": "mock",
-            "message": "LLM call would happen here",
-            "prompt": prompt,
+            "content": response.content,
+            "model": response.model,
+            "provider": response.provider.value,
+            "usage": response.usage,
             "task_type": request.task_type,
         }
 

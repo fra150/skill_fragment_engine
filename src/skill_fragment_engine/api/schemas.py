@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from skill_fragment_engine.core.enums import TaskType, Decision
+from skill_fragment_engine.core.enums import TaskType, Decision, FeedbackType, FeedbackCategory
 
 
 # Request Schemas
@@ -170,3 +170,47 @@ class ErrorResponse(BaseModel):
     error: str
     detail: str | None = None
     code: str | None = None
+
+
+class FeedbackRequest(BaseModel):
+    """Request to submit feedback on a fragment execution."""
+
+    execution_id: UUID | None = Field(default=None, description="Related execution ID")
+    fragment_id: UUID | None = Field(default=None, description="Related fragment ID")
+    variant_id: UUID | None = Field(default=None, description="Related variant ID")
+    
+    feedback_type: FeedbackType = Field(..., description="Type of feedback: positive, negative, or neutral")
+    category: FeedbackCategory = Field(default=FeedbackCategory.QUALITY, description="Feedback category")
+    score: float = Field(..., ge=0.0, le=1.0, description="Quality score from 0 to 1")
+    
+    comment: str = Field(default="", description="Optional user comment")
+    expected_output: str | None = Field(default=None, description="What user expected")
+    actual_output: str | None = Field(default=None, description="What user got")
+    
+    user_id: str | None = Field(default=None, description="Optional user identifier")
+    session_id: str | None = Field(default=None, description="Session identifier")
+
+    class Config:
+        """Pydantic config."""
+        use_enum_values = True
+
+
+class FeedbackResponse(BaseModel):
+    """Response after submitting feedback."""
+
+    feedback_id: UUID
+    success: bool
+    message: str
+
+
+class FeedbackStatsResponse(BaseModel):
+    """Feedback statistics response."""
+
+    total_feedback: int
+    average_score: float
+    positive_count: int
+    negative_count: int
+    neutral_count: int
+    category_breakdown: dict[str, int]
+    positive_ratio: float
+    negative_ratio: float

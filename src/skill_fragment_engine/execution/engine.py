@@ -21,6 +21,7 @@ from skill_fragment_engine.core.models import (
     InputSignature,
     OutputSchema,
 )
+from skill_fragment_engine.core.metrics import metrics_collector
 from skill_fragment_engine.execution.reuse_executor import ReuseExecutor
 from skill_fragment_engine.execution.adapt_executor import AdaptExecutor
 from skill_fragment_engine.execution.recompute_executor import RecomputeExecutor
@@ -109,6 +110,9 @@ class ExecutionEngine:
             execution_id=uuid4(),
             request=request,
         )
+        
+        # Start latency timer
+        metrics_collector.start_timer("total_latency")
 
         try:
             logger.info(
@@ -133,6 +137,13 @@ class ExecutionEngine:
                 latency_ms=context.latency_ms,
                 cost=context.cost,
             )
+            
+            # Record metrics
+            total_latency = metrics_collector.stop_timer("total_latency")
+            metrics_collector.record_request(
+                decision=context.decision.value,
+                latency_ms=context.latency_ms,
+            )
 
         except Exception as e:
             logger.error(
@@ -148,6 +159,7 @@ class ExecutionEngine:
 
     async def _retrieve_candidates(self, context: ExecutionContext) -> None:
         """Retrieve candidate fragments for the request."""
+        metrics_collector.start_timer("retrieval_latency")
         candidates = await self.matcher.find_candidates(
             prompt=context.request.prompt,
             context=context.request.context,
@@ -156,6 +168,10 @@ class ExecutionEngine:
         )
 
         context.candidates = candidates
+        
+        # Record retrieval latency
+        retrieval_latency = metrics_collector.stop_timer("retrieval_latency")
+        metrics_collector.retrieval_latency.observe(retrieval_latency)
 
         logger.debug(
             "candidates_retrieved",
@@ -164,6 +180,8 @@ class ExecutionEngine:
 
     async def _validate(self, context: ExecutionContext) -> None:
         """Validate candidates and decide action."""
+        metrics_collector.start_timer("validation_latency")
+        
         # Load fragments for candidates
         fragments: dict[str, SkillFragment] = {}
         for candidate in context.candidates:
@@ -182,9 +200,15 @@ class ExecutionEngine:
         context.validation_result = validation_result
         context.decision = validation_result.decision
         context.fragment = validation_result.fragment
+        
+        # Record validation latency
+        validation_latency = metrics_collector.stop_timer("validation_latency")
+        metrics_collector.validation_latency.observe(validation_latency)
 
     async def _execute_decision(self, context: ExecutionContext) -> None:
         """Execute the validated decision."""
+        metrics_collector.start_timer("execution_latency")
+        
         request = context.request
         validation = context.validation_result
 
@@ -208,10 +232,11 @@ class ExecutionEngine:
                 )
 
         elif context.decision == Decision.ADAPT:
-            context.result, context.variant_id = await self.adapt_executor.execute(
+            context.result, variant_id_str = await self.adapt_executor.execute(
                 fragment=context.fragment,
                 request=request,
             )
+            context.variant_id = UUID(variant_id_str) if variant_id_str else None
             context.cost = self.settings.adaptation_cost
             context.cost_saved = self.settings.base_execution_cost - context.cost
 
@@ -222,6 +247,10 @@ class ExecutionEngine:
             )
             context.cost = self.settings.base_execution_cost
             context.cost_saved = 0.0
+            
+        # Record execution latency
+        execution_latency = metrics_collector.stop_timer("execution_latency")
+        metrics_collector.execution_latency.observe(execution_latency)
 
         await self._persist_after_execution(context)
 

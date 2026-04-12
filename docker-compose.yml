@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  sfe:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/sfe
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_ENABLED=true
+      - LLM_API_KEY=${LLM_API_KEY}
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=sfe
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:

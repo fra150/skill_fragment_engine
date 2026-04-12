@@ -9,9 +9,7 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
 
-# =============================================================================
 # Task Type Thresholds
-# =============================================================================
 
 
 class TaskTypeThresholds(BaseModel):
@@ -92,9 +90,7 @@ THRESHOLDS_CONFIG: dict[str, TaskTypeThresholds] = {
 }
 
 
-# =============================================================================
 # Main Settings
-# =============================================================================
 
 
 class Settings(BaseSettings):
@@ -134,6 +130,118 @@ class Settings(BaseSettings):
     embedding_model: str = Field(
         default="text-embedding-ada-002",
         description="OpenAI embedding model"
+    )
+    # IVF-PQ/OPQ optimization settings
+    vector_use_ivf_pq: bool = Field(
+        default=False,
+        description="Enable IVF-PQ indexing for better scalability with large vector datasets"
+    )
+    vector_use_opq: bool = Field(
+        default=False,
+        description="Enable OPQ (Optimized Product Quantization) for better quantization accuracy"
+    )
+    vector_ivf_nlist: int = Field(
+        default=100,
+        description="Number of Voronoi cells for IVF indexing"
+    )
+    vector_nprobe: int = Field(
+        default=10,
+        description="Number of cells to visit during IVF search (higher = more accurate but slower)"
+    )
+    vector_pq_m: int = Field(
+        default=16,
+        description="Number of subquantizers for PQ"
+    )
+    vector_pq_nbits: int = Field(
+        default=8,
+        description="Bits per subquantizer for PQ"
+    )
+    vector_opq_train_iterations: int = Field(
+        default=20,
+        description="Number of training iterations for OPQ"
+    )
+
+    # Clustering
+    clustering_enabled: bool = Field(
+        default=False,
+        description="Enable automatic clustering of fragments"
+    )
+    clustering_method: str = Field(
+        default="auto",
+        description="Clustering method (auto, kmeans, dbscan, hierarchical)"
+    )
+    clustering_min_clusters: int = Field(
+        default=2,
+        description="Minimum number of clusters"
+    )
+    clustering_max_clusters: int = Field(
+        default=50,
+        description="Maximum number of clusters"
+    )
+
+    # Encryption
+    encryption_enabled: bool = Field(
+        default=False,
+        description="Enable encryption for sensitive fragment data"
+    )
+    encryption_key: str | None = Field(
+        default=None,
+        description="Fernet encryption key (base64 encoded)"
+    )
+    encryption_password: str = Field(
+        default="default_password",
+        description="Password to derive encryption key if key not provided"
+    )
+    encryption_salt: bytes = Field(
+        default=b'skill_fragment_engine_salt',
+        description="Salt for key derivation"
+    )
+    encryption_sensitive_fields: list[str] = Field(
+        default_factory=lambda: ["prompt", "result", "context"],
+        description="Fields to encrypt in fragments"
+    )
+
+    # RBAC
+    rbac_enabled: bool = Field(
+        default=False,
+        description="Enable RBAC for API access control"
+    )
+    rbac_default_role: str = Field(
+        default="user",
+        description="Default role for unauthenticated users"
+    )
+
+    # Audit Logging
+    audit_enabled: bool = Field(
+        default=True,
+        description="Enable audit logging"
+    )
+    audit_log_path: str = Field(
+        default="./data/audit.json",
+        description="Path to audit log file"
+    )
+    audit_max_events: int = Field(
+        default=10000,
+        description="Maximum events to keep in audit log"
+    )
+
+    # Anonymization
+    anonymization_enabled: bool = Field(
+        default=False,
+        description="Enable anonymization of PII in fragments"
+    )
+    anonymization_patterns: list[str] = Field(
+        default_factory=lambda: [
+            r"\b[A-Z]{2}\d{6,9}\b",  # ID numbers
+            r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
+            r"\b\d{16}\b",  # Credit card
+            r"\b[\w.-]+@[\w.-]+\.\w+\b",  # Email
+        ],
+        description="Regex patterns for PII detection"
+    )
+    anonymization_replacement: str = Field(
+        default="[REDACTED]",
+        description="Replacement text for PII"
     )
 
     # Redis (optional cache)
@@ -184,6 +292,10 @@ class Settings(BaseSettings):
         ge=0.0,
         le=1.0,
         description="Minimum keyword overlap to consider a similar match"
+    )
+    similarity_algorithm: str = Field(
+        default="jaccard",
+        description="Similarity algorithm to use for keyword matching (jaccard, cosine, dice)"
     )
 
     # Governance
@@ -248,9 +360,7 @@ class Settings(BaseSettings):
         case_sensitive = False
 
 
-# =============================================================================
 # Configuration Loading
-# =============================================================================
 
 
 def load_yaml_config(config_path: str | Path) -> dict[str, Any]:

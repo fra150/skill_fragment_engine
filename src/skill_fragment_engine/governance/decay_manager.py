@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 import structlog
@@ -27,6 +27,11 @@ class DecayManager:
     def __init__(self):
         self.settings = get_settings()
 
+    def _as_utc(self, dt: datetime) -> datetime:
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+
     def calculate_decay_score(self, fragment: SkillFragment) -> float:
         """
         Calculate current decay score for a fragment.
@@ -43,7 +48,8 @@ class DecayManager:
         thresholds = self._get_thresholds(task_type)
 
         # Time-based decay (exponential)
-        age_days = (datetime.utcnow() - fragment.created_at).days
+        created_at = self._as_utc(fragment.created_at)
+        age_days = (datetime.now(timezone.utc) - created_at).days
         half_life = thresholds.half_life_days
 
         # Exponential decay: score = 0.5 ^ (age / half_life)
@@ -87,11 +93,11 @@ class DecayManager:
 
     def _count_recent_uses(self, fragment: SkillFragment, days: int = 30) -> int:
         """Count fragment uses in the last N days."""
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
         recent_validations = [
             v for v in fragment.validation_history
-            if v.timestamp > cutoff
+            if self._as_utc(v.timestamp) > cutoff
         ]
 
         return len(recent_validations)
@@ -119,7 +125,7 @@ class DecayManager:
             DecayReport with statistics
         """
         report = DecayReport()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         for fragment in fragments:
             if not fragment.is_active:
@@ -137,7 +143,12 @@ class DecayManager:
                     update_callback(fragment, old_score, new_score)
 
             # Check for deactivation
-            thresholds = self._get_thresholds(fragment.task_type.value)
+            task_type = (
+                fragment.task_type.value
+                if hasattr(fragment.task_type, "value")
+                else str(fragment.task_type)
+            )
+            thresholds = self._get_thresholds(task_type)
             if new_score < thresholds.min_decay_threshold:
                 fragment.is_active = False
                 report.deactivated += 1
@@ -170,8 +181,8 @@ class DecayManager:
         task_type = fragment.task_type.value if hasattr(fragment.task_type, "value") else str(fragment.task_type)
         thresholds = self._get_thresholds(task_type)
 
-        # Never prune fresh fragments
-        age_days = (datetime.utcnow() - fragment.created_at).days
+        created_at = self._as_utc(fragment.created_at)
+        age_days = (datetime.now(timezone.utc) - created_at).days
         if age_days < 7:  # Minimum 7 days old
             return False
 

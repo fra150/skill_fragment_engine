@@ -41,10 +41,28 @@ class DecisionClassifier:
     2. Distance <= threshold.exact_match → REUSE
     3. Distance <= threshold.adapt_match and adaptation cheaper → ADAPT
     4. Otherwise → RECOMPUTE
+    
+    Optionally integrates with FeedbackService for adaptive thresholds
+    based on user feedback patterns.
     """
 
-    def __init__(self):
+    def __init__(self, use_adaptive_thresholds: bool = True):
         self._thresholds_cache: dict[str, TaskTypeThresholds] = {}
+        self._use_adaptive_thresholds = use_adaptive_thresholds
+        self._feedback_service = None
+        
+        # Cache for adaptive thresholds
+        self._adaptive_thresholds: dict[str, dict] = {}
+    
+    def _get_feedback_service(self):
+        """Lazy load feedback service to avoid circular imports."""
+        if self._feedback_service is None and self._use_adaptive_thresholds:
+            try:
+                from skill_fragment_engine.services.feedback_service import get_feedback_service
+                self._feedback_service = get_feedback_service()
+            except ImportError:
+                pass
+        return self._feedback_service
 
     def classify(self, input_data: DecisionInput) -> DecisionOutput:
         """
@@ -145,10 +163,49 @@ class DecisionClassifier:
         )
 
     def _get_thresholds(self, task_type: str) -> TaskTypeThresholds:
-        """Get thresholds for task type (cached)."""
+        """Get thresholds for task type, optionally adjusted by feedback."""
         if task_type not in self._thresholds_cache:
             self._thresholds_cache[task_type] = get_task_thresholds(task_type)
-        return self._thresholds_cache[task_type]
+        
+        base_thresholds = self._thresholds_cache[task_type]
+        
+        # If adaptive thresholds enabled, get adjustments from feedback
+        if self._use_adaptive_thresholds:
+            feedback_svc = self._get_feedback_service()
+            if feedback_svc:
+                try:
+                    import asyncio
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # If we're in async context, we'll use sync fallback
+                        adjusted = self._get_adjusted_thresholds_sync(task_type, base_thresholds)
+                    else:
+                        adjusted = asyncio.run(feedback_svc.get_adjusted_thresholds(task_type))
+                    
+                    # Return adjusted thresholds
+                    from skill_fragment_engine.core.config import TaskTypeThresholds
+                    return TaskTypeThresholds(
+                        exact_match=adjusted["exact_match"],
+                        adapt_match=adjusted["adapt_match"],
+                        adaptation_allowed=base_thresholds.adaptation_allowed,
+                        half_life_days=base_thresholds.half_life_days,
+                        min_decay_threshold=base_thresholds.min_decay_threshold,
+                    )
+                except Exception as e:
+                    # Fall back to base thresholds
+                    import structlog
+                    logger = structlog.get_logger(__name__)
+                    logger.warning("adaptive_thresholds_failed", error=str(e))
+        
+        return base_thresholds
+    
+    def _get_adjusted_thresholds_sync(self, task_type: str, base: TaskTypeThresholds) -> dict:
+        """Synchronous fallback for getting adjusted thresholds."""
+        # Simple sync version - in production would be async
+        return {
+            "exact_match": base.exact_match,
+            "adapt_match": base.adapt_match,
+        }
 
     def _compute_confidence(self, distance: float, threshold: float) -> float:
         """Compute confidence score based on distance vs threshold."""

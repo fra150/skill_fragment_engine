@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Set
 
 import structlog
 
@@ -11,6 +11,7 @@ from skill_fragment_engine.core.exceptions import RetrievalError
 from skill_fragment_engine.core.models import MatchCandidate
 from skill_fragment_engine.retrieval.embedder import EmbeddingService
 from skill_fragment_engine.retrieval.hasher import InputHasher
+from skill_fragment_engine.retrieval.similarity import SimilarityFactory
 from skill_fragment_engine.retrieval.vector_store import VectorStore
 from skill_fragment_engine.store import FragmentStore
 
@@ -39,6 +40,9 @@ class SkillMatcherLayer:
         self.vector_store = vector_store or VectorStore()
         self.store = store or FragmentStore()
         self.hasher = InputHasher()
+        self.similarity_algorithm = SimilarityFactory.create(
+            get_settings().similarity_algorithm or "jaccard"
+        )
 
         self.top_k = top_k or settings.similarity_top_k
         self.min_similarity = min_similarity or settings.min_similarity_score

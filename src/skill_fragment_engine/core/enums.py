@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
@@ -66,9 +66,9 @@ class ValidationResult(str, Enum):
     NEEDS_REVIEW = "needs_review"
 
 
-# =============================================================================
+
 # Input/Output Schemas
-# =============================================================================
+
 
 
 class InputSignature(BaseModel):
@@ -144,9 +144,9 @@ class OutputSchema(BaseModel):
         return v or ""
 
 
-# =============================================================================
+
 # Metrics & Tracking
-# =============================================================================
+
 
 
 class FragmentMetrics(BaseModel):
@@ -181,7 +181,7 @@ class ValidationRecord(BaseModel):
 
     record_id: UUID = Field(default_factory=uuid4)
     fragment_id: UUID
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     validation_type: str = Field(
         default="context_comparison",
         description="Type of validation performed"
@@ -192,9 +192,9 @@ class ValidationRecord(BaseModel):
     latency_saved: float = Field(default=0.0, description="Latency saved (seconds)")
 
 
-# =============================================================================
+
 # Core Entities
-# =============================================================================
+
 
 
 class SkillFragment(BaseModel):
@@ -228,9 +228,8 @@ class SkillFragment(BaseModel):
     variants: list[UUID] = Field(default_factory=list)
     parent_id: UUID | None = Field(default=None, description="Parent fragment if variant")
 
-    # Lifecycle
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     decay_score: float = Field(
         default=1.0, ge=0.0, le=1.0,
         description="Freshness/reliability score"
@@ -249,7 +248,7 @@ class SkillFragment(BaseModel):
     def add_validation(self, record: ValidationRecord) -> None:
         """Add validation record and update metrics."""
         self.validation_history.append(record)
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
 
         # Update metrics based on outcome
         if record.outcome == ValidationOutcome.REUSED_SUCCESSFULLY:
@@ -285,8 +284,7 @@ class Variant(BaseModel):
     validation_result: ValidationResult = Field(default=ValidationResult.PENDING)
     performance_delta: dict[str, float] = Field(default_factory=dict)
 
-    # Lifecycle
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     quality_score: float = Field(default=0.5, ge=0.0, le=1.0)
 
     class Config:
@@ -295,9 +293,9 @@ class Variant(BaseModel):
         use_enum_values = True
 
 
-# =============================================================================
+
 # API Request/Response Models
-# =============================================================================
+
 
 
 class ExecutionRequest(BaseModel):
@@ -350,6 +348,52 @@ class ExecutionResponse(BaseModel):
     decision: Decision
     result: Any
     metadata: ExecutionMetadata
+
+    class Config:
+        """Pydantic config."""
+
+        use_enum_values = True
+
+
+class FeedbackType(str, Enum):
+    """Type of feedback from users."""
+
+    POSITIVE = "positive"
+    NEGATIVE = "negative"
+    NEUTRAL = "neutral"
+
+
+class FeedbackCategory(str, Enum):
+    """Category of feedback."""
+
+    QUALITY = "quality"
+    ACCURACY = "accuracy"
+    RELEVANCE = "relevance"
+    PERFORMANCE = "performance"
+    USABILITY = "usability"
+
+
+class UserFeedback(BaseModel):
+    """Feedback from users on fragment execution."""
+
+    feedback_id: UUID = Field(default_factory=uuid4)
+    execution_id: UUID | None = Field(default=None, description="Related execution ID")
+    fragment_id: UUID | None = Field(default=None, description="Related fragment ID")
+    variant_id: UUID | None = Field(default=None, description="Related variant ID")
+    
+    feedback_type: FeedbackType = Field(..., description="Type of feedback")
+    category: FeedbackCategory = Field(default=FeedbackCategory.QUALITY)
+    score: float = Field(default=0.5, ge=0.0, le=1.0, description="Quality score 0-1")
+    
+    comment: str = Field(default="", description="User comment")
+    expected_output: str | None = Field(default=None, description="What user expected")
+    actual_output: str | None = Field(default=None, description="What user got")
+    
+    user_id: str | None = Field(default=None, description="Optional user identifier")
+    session_id: str | None = Field(default=None, description="Session identifier")
+    
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    processed: bool = Field(default=False, description="Whether feedback has been processed")
 
     class Config:
         """Pydantic config."""

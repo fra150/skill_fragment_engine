@@ -5,13 +5,15 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
 from skill_fragment_engine.core.config import get_settings
 from skill_fragment_engine.core.models import SkillFragment
 from skill_fragment_engine.retrieval.hasher import InputHasher
+from skill_fragment_engine.retrieval.similarity import SimilarityFactory
+from skill_fragment_engine.services.encryption_service import get_field_encryption
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,10 @@ class FragmentStore:
         self.path = path or settings.fragment_store_path
         self._data: dict[str, dict[str, Any]] = {}
         self._hasher = InputHasher()
+        self._similarity_algorithm = SimilarityFactory.create(
+            getattr(settings, 'similarity_algorithm', 'jaccard')
+        )
+        self._encryption = get_field_encryption()
         self._load()
 
     def _load(self) -> None:
@@ -37,14 +43,35 @@ class FragmentStore:
         with open(self.path, encoding="utf-8") as f:
             raw = json.load(f)
             self._data = raw if isinstance(raw, dict) else {}
+        
+        self._decrypt_fragments()
+
+    def _decrypt_fragments(self) -> None:
+        """Decrypt fragments if encryption is enabled."""
+        for fragment_id, rec in self._data.items():
+            if rec.get("_encrypted", False):
+                decrypted = self._encryption.decrypt_fragment(rec)
+                self._data[fragment_id] = decrypted
 
     def _save(self) -> None:
         parent = os.path.dirname(self.path)
         if parent:
             os.makedirs(parent, exist_ok=True)
 
+        data_to_save = self._encrypt_fragments_before_save()
+        
         with open(self.path, "w", encoding="utf-8") as f:
-            json.dump(self._data, f, indent=2, ensure_ascii=False, default=str)
+            json.dump(data_to_save, f, indent=2, ensure_ascii=False, default=str)
+
+    def _encrypt_fragments_before_save(self) -> dict[str, Any]:
+        """Encrypt fragments before saving to disk."""
+        if not self._encryption.enabled:
+            return self._data
+        
+        encrypted_data = {}
+        for fragment_id, rec in self._data.items():
+            encrypted_data[fragment_id] = self._encryption.encrypt_fragment(rec)
+        return encrypted_data
 
     def _compute_input_hash(
         self,
@@ -153,7 +180,7 @@ class FragmentStore:
                 continue
             stored_prompt = str(rec.get("prompt") or "")
             stored_words = {w for w in stored_prompt.lower().split() if w}
-            overlap = len(query_words & stored_words) / max(len(query_words), 1)
+            overlap = self._similarity_algorithm.compute_similarity(query_words, stored_words)
             if overlap >= threshold:
                 scored.append((fragment_id, round(float(overlap), 4)))
 
