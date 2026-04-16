@@ -339,6 +339,7 @@ class ExecutionMetadata(BaseModel):
     latency_ms: float = 0.0
     cost_saved: float = 0.0
     decision_reason: str = ""
+    tokens_used: int = 0
 
 
 class ExecutionResponse(BaseModel):

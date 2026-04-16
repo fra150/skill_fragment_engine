@@ -207,7 +207,7 @@ class VectorStore:
                 train_data = np.array(train_vectors, dtype=np.float32)
                 train_ids_array = np.array(train_ids, dtype=np.int64)
                 self.index.train(train_data)
-                self.index.add_with_ids(train_data, train_ids_array)
+                self.index.add(train_data)
                 self.index.is_trained = True
                 logger.info("vector_store_index_trained_during_add", 
                            vectors_trained=len(train_vectors))
@@ -215,14 +215,7 @@ class VectorStore:
         # Add to index
         position = self.index.ntotal
         embedding_to_add = np.array(embedding, dtype=np.float32).reshape(1, -1)
-        
-        # For trained IVF-PQ or flat index, use appropriate add method
-        if hasattr(self.index, 'is_trained') and self.index.is_trained:
-            # For IVF-PQ that's been trained, we can add with IDs
-            self.index.add_with_ids(embedding_to_add, np.array([position], dtype=np.int64))
-        else:
-            # For flat index or untrained IVF-PQ, use regular add
-            self.index.add(embedding_to_add)
+        self.index.add(embedding_to_add)
 
         # Update maps
         self.id_map[position] = fragment_id
@@ -276,6 +269,8 @@ class VectorStore:
         
         # Set nprobe for IVF indexes to control search accuracy/speed tradeoff
         if hasattr(self.index, 'nprobe'):
+            from skill_fragment_engine.core.config import get_settings
+            settings = get_settings()
             self.index.nprobe = getattr(settings, 'vector_nprobe', 10)
 
         # For IVF indexes, we need to train if not already trained

@@ -52,6 +52,7 @@ class ExecutionContext:
     variant_id: UUID | None = None
     cost: float = 0.0
     cost_saved: float = 0.0
+    tokens_used: int = 0
     error: str | None = None
 
     @property
@@ -247,6 +248,9 @@ class ExecutionEngine:
             )
             context.cost = self.settings.base_execution_cost
             context.cost_saved = 0.0
+            if isinstance(context.result, dict) and "usage" in context.result:
+                usage = context.result["usage"] or {}
+                context.tokens_used = usage.get("total_tokens", 0)
             
         # Record execution latency
         execution_latency = metrics_collector.stop_timer("execution_latency")
@@ -358,6 +362,7 @@ class ExecutionEngine:
                 if context.validation_result
                 else "default"
             ),
+            tokens_used=context.tokens_used,
         )
 
         return ExecutionResponse(

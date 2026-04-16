@@ -234,7 +234,14 @@ class LLMService:
     ):
         settings = get_settings()
         
-        self.provider = provider or LLMProvider(settings.llm_model.split("-")[0] if "gpt" in settings.llm_model.lower() else "openai")
+        model_prefix = settings.llm_model.split("-")[0].lower()
+        if "gpt" in model_prefix:
+            mapped_provider = "openai"
+        elif "claude" in model_prefix:
+            mapped_provider = "anthropic"
+        else:
+            mapped_provider = model_prefix
+        self.provider = provider or LLMProvider(mapped_provider)
         self.api_key = api_key or settings.llm_api_key or "mock-key"
         self.base_url = base_url or settings.llm_base_url
         self.max_retries = max_retries
@@ -378,5 +385,7 @@ def get_llm_service() -> LLMService:
     """Get or create the LLM service singleton."""
     global _llm_service
     if _llm_service is None:
-        _llm_service = LLMService()
+        settings = get_settings()
+        provider = LLMProvider.MOCK if not settings.llm_api_key else None
+        _llm_service = LLMService(provider=provider)
     return _llm_service
