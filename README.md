@@ -1,220 +1,83 @@
-﻿# Skill Fragment Engine (SFE)
+<div align="center">
+  <h1>🧠 Skill Fragment Engine (SFE)</h1>
+  <p><em>A cognitive caching layer that empowers AI agents to <strong>Reuse</strong>, <strong>Adapt</strong>, and <strong>Evolve</strong> rather than blindly recomputing.</em></p>
+  
+  [![Python](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-00a393.svg)](https://fastapi.tiangolo.com)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+</div>
 
-A "cognitive cache" layer for AI agents with **verified reuse** of results.
+---
 
-Core principle: **LOOK BEFORE YOU THINK**. Before executing any task, SFE:
-1. Looks for an exact match (0 LLM tokens)
-2. Looks for similar matches (0 LLM tokens)
-3. Injects "cognitive history" into the context
-4. Decides REUSE / ADAPT / RECOMPUTE
-5. Saves the new trace (fragment)
+## 💡 The Core Principle: *Look Before You Think*
 
-## Features
+Why pay for expensive LLM tokens and latency to solve the exact same problem twice? 
 
-### Core Capabilities
-- **Local fragment persistence** (JSON): `./data/fragments.json`
-- **Exact + similar lookup** (keyword overlap) at zero cost
-- **Semantic retrieval** with FAISS vector store
-- **Advanced similarity algorithms**: Jaccard, Cosine, Dice
-- **IVF-PQ/OPQ indexing** for large-scale vector datasets
+Before executing any task, **SFE** intercepts the request and performs a cognitive lookup:
+1. **Zero-cost exact matching** (0 LLM tokens, 0 API calls).
+2. **Advanced similarity matching** (Jaccard, Cosine, Dice) and semantic vector search (FAISS).
+3. **Cognitive Injection**: Injects past successful problem-solving history directly into the context.
+4. **Intelligent Decision Engine**: Autonomously decides whether to `REUSE`, `ADAPT`, or `RECOMPUTE`.
+5. **Continuous Learning**: Saves the new execution trace as a highly reusable *Skill Fragment*.
 
-### Security & Privacy
-- **Encryption**: Field-level encryption with Fernet (AES-128 + HMAC)
-- **RBAC**: Role-based access control (Admin, Power User, User, ReadOnly, Guest)
-- **Audit Logging**: Complete operation tracking for compliance
-- **Anonymization**: PII detection and redaction
+---
 
-### Decision Engine
-- **REUSE**: Returns cached output (0.000002$ cost)
-- **ADAPT**: Modifies cached output with heuristics (0.0021$ cost)
-- **RECOMPUTE**: Fresh LLM computation (0.021$ cost)
-- Context-aware adaptation with style transfer
+## 🚀 Key Capabilities & Architecture
 
-### Advanced Services
-- **Versioning**: Full version history, branches, rollback
-- **Feedback System**: Quality scoring, adaptive thresholds
-- **Transfer Learning**: Pattern learning for better adaptations
-- **Rollback**: Automatic rollback on repeated failures
+SFE is designed for massive scale, deep integration with AI ecosystems, and enterprise-grade governance.
 
-### Clustering
-- **K-Means**, **DBSCAN**, **Hierarchical** clustering
-- Auto-detection of optimal cluster count (elbow method)
-- Find similar fragments within same cluster
+### 🔌 AI Tool Integration & Ecosystem
+- **AI Coding Assistants Ready**: Pre-built skills and adapters for tools like **[OpenCode](https://opencode.dev/)**, **Claude Code**, and **ClawCode**. Just load the SFE skill and watch your AI agent become instantly smarter and cheaper.
+- **Polyglot SDKs**: Native clients available for **Python**, **JavaScript/TypeScript**, and **Java/Kotlin**.
+- **Plugin System**: Easily plug SFE into frameworks like **LangChain** and **LlamaIndex** using the provided adapters in `plugins/examples/`.
 
-## Quick Start
+### 🧠 Advanced Cognitive Retrieval
+- **Hybrid Search**: Combines deterministic keyword overlap (zero-cost) with deep semantic embeddings.
+- **Scalable Vector Store**: Native FAISS integration optimized with **IVF-PQ** (Inverted File System with Product Quantization) and **OPQ** for handling massive vector datasets with sub-millisecond latency.
+- **Automatic Clustering**: Built-in K-Means, DBSCAN, and Hierarchical clustering (with auto-detection via elbow method) to discover patterns in your AI's problem-solving behavior.
 
-### Local Installation
+### 📈 Evolution & Transfer Learning
+- **Feedback Loop**: Users and agents can submit positive/negative feedback. SFE dynamically adjusts quality scores and matching thresholds (adaptive strictness).
+- **Transfer Learning**: Learns which adaptation parameters work best for specific tasks and proactively suggests them for future executions.
+- **Automatic Rollback**: Detects failing fragments and autonomously rolls back to the last known "safe" version.
+
+### 🛡️ Enterprise Governance & Privacy
+- **Versioning & Branching**: Every fragment modification is tracked. Support for branches, version history, and manual rollback.
+- **Decay & Pruning**: Stale or failing knowledge slowly "decays" and gets automatically pruned.
+- **Privacy First**: Built-in PII anonymization (SSN, credit cards, emails) and field-level AES-128 encryption.
+- **RBAC & Audit**: Role-Based Access Control and complete audit trailing for every operation.
+
+---
+
+## ⚡ Quick Start
+
+### 1. Local Setup
 
 ```bash
+# Clone and install dependencies
+git clone https://github.com/fra150/skill_fragment_engine.git
+cd skill_fragment_engine
 pip install -r requirements.txt
 ```
 
-### Start Server
+### 2. Start the Engine
 
 ```powershell
+# Windows (PowerShell)
 $env:PYTHONPATH="src"
 python -m uvicorn skill_fragment_engine.main:app --host 0.0.0.0 --port 8000
 ```
-
-- Home: http://localhost:8000/
-- Swagger: http://localhost:8000/docs
-
-### Docker
-
+*Or use Docker:*
 ```bash
-# Build
-docker build -t skill-fragment-engine .
-
-# Run
-docker run -d -p 8000:8000 skill-fragment-engine
-
-# Or with docker-compose
 docker-compose up -d
 ```
 
-## Configuration (.env)
+- **API Base**: `http://localhost:8000/api/v1`
+- **Interactive Docs**: `http://localhost:8000/docs`
 
-```env
-# LLM
-LLM_API_KEY=sk-...
-LLM_MODEL=gpt-5
-LLM_BASE_URL=https://api.openai.com/v1
+---
 
-# Storage
-FRAGMENT_STORE_PATH=./data/fragments.json
-VECTOR_STORE_PATH=./data/faiss
-EMBEDDING_DIM=1536
-
-# Retrieval
-SIMILARITY_TOP_K=10
-MIN_SIMILARITY_SCORE=0.5
-KEYWORD_SIMILARITY_MIN_OVERLAP=0.3
-SIMILARITY_ALGORITHM=jaccard
-
-# Vector Store Optimization
-VECTOR_USE_IVF_PQ=false
-VECTOR_USE_OPQ=false
-VECTOR_IVF_NLIST=100
-VECTOR_NPROBE=10
-VECTOR_PQ_M=16
-VECTOR_PQ_NBITS=8
-
-# Clustering
-CLUSTERING_ENABLED=false
-CLUSTERING_METHOD=auto
-CLUSTERING_MIN_CLUSTERS=2
-CLUSTERING_MAX_CLUSTERS=50
-
-# Redis (optional)
-REDIS_URL=redis://localhost:6379/0
-REDIS_ENABLED=false
-```
-
-## API Endpoints
-
-### Execution
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/execute` | Execute a task through SFE |
-
-### Fragments
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/fragment/search` | Search fragments by similarity |
-| GET | `/api/v1/fragments/{id}` | Get fragment by ID |
-| POST | `/api/v1/fragment` | Create fragment manually |
-| POST | `/api/v1/fragment/{id}/validate` | Validate fragment |
-| GET | `/api/v1/fragments/{id}/versions` | Get version history |
-| POST | `/api/v1/fragments/{id}/versions` | Create new version |
-| POST | `/api/v1/fragments/{id}/rollback/{version}` | Rollback to version |
-| GET | `/api/v1/fragments/{id}/branches` | Get branches |
-| GET | `/api/v1/fragments/{id}/quality` | Get quality score |
-
-### Clustering
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/clustering/run` | Run clustering on all fragments |
-| GET | `/api/v1/clustering/info` | Get cluster information |
-| GET | `/api/v1/clustering/{id}/similar` | Get similar fragments in cluster |
-
-### Feedback
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/feedback` | Submit feedback on execution |
-| GET | `/api/v1/feedback/stats` | Get feedback statistics |
-| GET | `/api/v1/feedback/recent` | Get recent feedback |
-
-### Versioning
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/fragments/{id}/versions` | Get version history |
-| POST | `/api/v1/fragments/{id}/versions` | Create new version |
-| POST | `/api/v1/fragments/{id}/rollback/{version}` | Rollback |
-| GET | `/api/v1/fragments/{id}/branches` | List branches |
-
-### Rollback
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/rollback/stats` | Get rollback statistics |
-| GET | `/api/v1/rollback/history` | Get rollback history |
-
-### Transfer Learning
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/transfer-learning/stats` | Get pattern statistics |
-| GET | `/api/v1/transfer-learning/patterns` | Get top patterns |
-| POST | `/api/v1/transfer-learning/learn` | Record adaptation |
-| GET | `/api/v1/transfer-learning/suggest` | Get suggested parameters |
-
-### Admin
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/metrics` | System metrics |
-| POST | `/api/v1/admin/prune` | Trigger pruning |
-| POST | `/api/v1/admin/decay` | Trigger decay calculation |
-| GET | `/api/v1/health` | Health check |
-
-## Usage Examples
-
-### Execute a Task
-
-```bash
-curl -X POST http://localhost:8000/api/v1/execute \
-  -H "Content-Type: application/json" \
-  -d '{
-    "task_type": "code_generation",
-    "prompt": "Write a function to reverse a string in Python",
-    "context": {"language": "python"},
-    "options": {"capture_fragment": true}
-  }'
-```
-
-### Search Fragments
-
-```bash
-curl "http://localhost:8000/api/v1/fragment/search?query=reverse%20a%20string&top_k=5"
-```
-
-### Run Clustering
-
-```bash
-curl -X POST "http://localhost:8000/api/v1/clustering/run?method=auto"
-```
-
-### Submit Feedback
-
-```bash
-curl -X POST http://localhost:8000/api/v1/feedback \
-  -H "Content-Type: application/json" \
-  -d '{
-    "feedback_type": "positive",
-    "score": 0.9,
-    "fragment_id": "uuid-here",
-    "comment": "Great result!"
-  }'
-```
-
-### Python Usage
+## 🛠️ Usage Example (Python)
 
 ```python
 from skill_fragment_engine.execution.engine import ExecutionEngine
@@ -222,85 +85,39 @@ from skill_fragment_engine.core.models import ExecutionRequest
 
 engine = ExecutionEngine()
 
+# The agent asks to solve a problem
 req = ExecutionRequest(
     task_type="code_generation",
-    prompt="Write a function to reverse a string in Python",
-    context={"language": "python"},
+    prompt="Write a Python function to reverse a linked list",
+    context={"language": "python", "framework": "standard"},
     options={"capture_fragment": True},
 )
 
+# SFE decides whether to REUSE, ADAPT, or RECOMPUTE
 res = await engine.execute(req)
-print(res.decision, res.metadata.cost_saved)
+
+print(f"Decision: {res.decision}")
+print(f"Saved Cost: ${res.metadata.cost_saved}")
 ```
 
-### Clustering in Python
+---
 
-```python
-from skill_fragment_engine.retrieval.clustering import ClusteringService
+## 🤖 Using SFE with Claude Code / OpenCode
 
-svc = ClusteringService(method="auto")
+SFE includes native skills for CLI AI coding agents. This allows your agent to query its own cognitive cache before writing code.
 
-embeddings = {
-    "frag_1": [0.1, 0.2, ...],
-    "frag_2": [0.15, 0.25, ...],
-}
+1. Locate the `skills/skill-fragment-engine/` directory.
+2. Load the `skill.yaml` into your agent (e.g., placing it in your `.opencode/skills/` directory).
+3. The agent will automatically invoke the `skill-fragment-engine` tool to check for existing solutions before consuming tokens.
 
-cluster_mapping = svc.cluster_fragments(embeddings)
-cluster_info = svc.get_cluster_info(embeddings)
-```
+---
 
-## Architecture
+## 📊 Telemetry & Sharding
+SFE is built to scale. It features a complete `MetricsCollector` (tracking hit rates, latency percentiles, memory usage, and cost savings) and a **Sharding Service** skeleton (Hash-based, Task-type based, Time-based) to distribute knowledge across distributed environments.
 
-```
-INPUT
-  │
-  ▼
-SKILL MATCHER LAYER
-  - Exact match (FragmentStore JSON)
-  - Similar match (keyword overlap)
-  - Semantic match (FAISS + embeddings)
-  │
-  ▼
-VALIDATOR ENGINE
-  - exact → REUSE
-  - similar + valid → REUSE
-  - similar + needs changes → ADAPT
-  - no match → RECOMPUTE
-  │
-  ▼
-EXECUTION
-  - REUSE: returns cached output
-  - ADAPT: modifies cached output (heuristics + LLM)
-  - RECOMPUTE: fresh LLM computation
-  │
-  ▼
-CAPTURE
-  - stores fragment to ./data/fragments.json
-  - indexes embedding to ./data/faiss
-```
+## 📄 License
 
-## Development
+MIT Open Source License.
 
-### Tests
-
-```bash
-python -m pytest -q
-```
-
-### Dev Tools
-
-```bash
-pip install -e ".[dev]"
-ruff check .
-mypy .
-```
-
-## On-disk Storage
-
-- `./data/fragments.json` - Serialized SkillFragments
-- `./data/faiss/index.faiss` - FAISS vector index
-- `./data/faiss/id_map.json` - Fragment ID mappings
-
-## License
-
-MIT open source license
+---
+*Developed by Francesco Bulla (FB) & AI Pair Programmer.*
