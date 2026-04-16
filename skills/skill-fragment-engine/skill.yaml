@@ -1,0 +1,12 @@
+name: skill-fragment-engine
+description: Use this skill when working with the Skill Fragment Engine (SFE) - a cognitive cache layer for AI agents with verified reuse of results. Includes fragment management, clustering, versioning, feedback, and execution capabilities.
+labels:
+  - ai
+  - caching
+  - cognitive-cache
+  - fragments
+  - skill-management
+  - reuse
+  - adaptation
+version: "1.0"
+author: Francesco Bulla
