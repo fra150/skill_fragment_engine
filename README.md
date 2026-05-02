@@ -112,6 +112,88 @@ SFE includes native skills for CLI AI coding agents. This allows your agent to q
 
 ---
 
+## 🔌 MCP Server Integration
+
+SFE can be used as an **MCP Server** to expose its tools to any AI agent that supports the MCP protocol.
+
+### Available Tools (12)
+
+| Tool | Description |
+|------|-------------|
+| sfe_execute | Execute a task through SFE pipeline |
+| sfe_search | Search for similar cached fragments |
+| sfe_feedback | Submit feedback on execution |
+| sfe_metrics | Get system metrics |
+| sfe_versions | Get fragment version history |
+| sfe_rollback | Rollback to specific version |
+| sfe_rollback_stats | Get rollback statistics |
+| sfe_transfer_learning_stats | Get learned pattern statistics |
+| sfe_suggest_adaptation | Get suggested adaptation parameters |
+| sfe_cluster | Run clustering on fragments |
+| sfe_health | Get health status |
+| sfe_save_trace | Save cognitive trace from external agent |
+
+### Running MCP Server
+
+```bash
+# Stdio (local AI tools)
+$env:PYTHONPATH="src"
+python -m skill_fragment_engine.mcp_main --stdio
+
+# HTTP (remote/deployed)
+python -m skill_fragment_engine.mcp_main --http 0.0.0.0 8000
+```
+
+### Claude Desktop Integration
+
+Add to `claude_desktop_config.json` (Windows: `%APPDATA%\Claude\claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "skill-fragment-engine": {
+      "command": "python",
+      "args": ["-m", "skill_fragment_engine.mcp_main", "--stdio"],
+      "env": {
+        "PYTHONPATH": "C:\\path\\to\\skill_fragment_engine\\src",
+        "SFE_API_KEY": "your-secret-key"
+      }
+    }
+  }
+}
+```
+
+**Environment Variables:**
+- `PYTHONPATH` - Path to src directory
+- `SFE_API_KEY` - Optional API key for authentication
+
+### HTTP API Endpoints
+
+When running with `--http`:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/mcp/initialize` | POST | Initialize connection |
+| `/mcp/tools` | GET | List available tools |
+| `/mcp/tools/call` | POST | Execute a tool |
+| `/mcp/events` | GET | SSE for notifications |
+
+### Authentication
+
+Set `SFE_API_KEY` environment variable. Include in requests:
+
+```bash
+# HTTP
+curl -X POST http://localhost:8000/mcp/tools/call \
+  -H "Authorization: Bearer your-secret-key" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "sfe_execute", "arguments": {"prompt": "test"}}'
+```
+
+The server implements MCP protocol 2024-11-05 with JSON communication over stdio and HTTP.
+
+---
+
 ## 📊 Telemetry & Sharding
 SFE is built to scale. It features a complete `MetricsCollector` (tracking hit rates, latency percentiles, memory usage, and cost savings) and a **Sharding Service** skeleton (Hash-based, Task-type based, Time-based) to distribute knowledge across distributed environments.
 

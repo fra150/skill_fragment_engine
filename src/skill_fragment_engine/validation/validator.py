@@ -135,6 +135,7 @@ class ValidatorEngine:
                 allow_adaptation=request.allow_adaptation,
                 allow_recompute=request.allow_recompute,
                 recompute_cost=self.settings.base_execution_cost,
+                adaptation_cost_estimate=None,
             )
         )
 

@@ -15,7 +15,7 @@ class DecisionInput:
     distance: float  # Context distance from comparison
     similarity_score: float  # Raw similarity from retrieval
     fragment: SkillFragment | None = None
-    adaptation_cost: float | None = None
+    adaptation_cost_estimate: float | None = None
     recompute_cost: float | None = None
     allow_adaptation: bool = True
     allow_recompute: bool = True
@@ -266,5 +266,5 @@ def create_decision_input(
         allow_adaptation=allow_adaptation,
         allow_recompute=allow_recompute,
         adaptation_cost_estimate=adaptation_cost,
-        recompute_cost_estimate=recompute_cost,
+        recompute_cost=recompute_cost,
     )
